@@ -24,8 +24,8 @@ class Follower:
         # filter out not masking tape (get it? __masking__ tape?)
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-        lower_yellow = numpy.array([30,0,130])
-        upper_yellow = numpy.array([80,70,255]) # masking tape, far test bench (bright line, red and gray carpet)
+        lower_yellow = numpy.array([30,0,150])
+        upper_yellow = numpy.array([100,70,255]) # masking tape, far test bench (bright line, red and gray carpet)
 
         # lower_yellow = numpy.array([30,0,110])
         # upper_yellow = numpy.array([80,60,255]) # masking tape, under the stairs (dim redder light)
@@ -61,21 +61,25 @@ class Follower:
             self.cmd_vel_pub.publish(self.twist)
 
             # "cooldown" on how long robot has not seen line
-            self.lostcount = self.lostcount - 5
-        # Can't see the color
+            if (self.lostcount > 0):
+                self.lostcount = self.lostcount - 10
         else: 
             # For "doubling back": If it can't see the line, it can turn to scan for it or turn around to go back
             # Also, the longer it sees nothing, it starts to go forward too. So it will start to "spiral" around the space for the line.
             # I think this is a good way to ensure it won't miss it.
-            self.twist.linear.x = self.lostcount / 50
-            self.twist.angular.z = .2
+            self.twist.linear.x = self.lostcount / 10
+            if self.lostcount < 100:
+                self.twist.angular.z = 5
+            else:
+                self.twist.angular.z = 1
             self.cmd_vel_pub.publish(self.twist)
-
             # Increase the time lost
             self.lostcount = self.lostcount + 1
+
+        print("lostcount", self.lostcount)
         cv2.imshow("image", image)
         cv2.waitKey(3)
 
-rospy.init_node('follower')
+rospy.init_node('line_follower')
 follower = Follower()
 rospy.spin()
